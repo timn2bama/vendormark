@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  vendors   Vendor[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vendor {
+  id              String           @id @default(cuid())
+  name            String
+  domain          String           @unique
+  techStack       String[]
+  overallScore    Int              @default(0)
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  breaches        BreachRecord[]
+  vulnerabilities Vulnerability[]
+  complianceDocs  ComplianceDoc[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model BreachRecord {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  description String
+  date        DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Vulnerability {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  cveId       String
+  severity    String
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model ComplianceDoc {
+  id           String   @id @default(cuid())
+  vendorId     String
+  vendor       Vendor   @relation(fields: [vendorId], references: [id])
+  name         String
+  status       String   // e.g., "Compliant", "Gaps Identified", "Expired"
+  parsedStatus Json     // Structured JSON from Gemini
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

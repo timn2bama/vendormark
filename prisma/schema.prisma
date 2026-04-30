@@ -9,16 +9,16 @@ datasource db {
 }
 
 model User {
-  id            String          @id @default(cuid())
+  id            String    @id @default(cuid())
+  email         String    @unique
   name          String?
-  email         String          @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   emailVerified DateTime?
   image         String?
   accounts      Account[]
   sessions      Session[]
   vendors       Vendor[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
 }
 
 model Account {
@@ -33,12 +33,10 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
- 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
- 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@id([provider, providerAccountId])
 }
 
@@ -46,61 +44,65 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
- 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
   identifier String
   token      String
   expires    DateTime
- 
+
   @@id([identifier, token])
 }
 
 model Vendor {
-  id              String           @id @default(cuid())
+  id              String          @id @default(cuid())
   name            String
-  domain          String           @unique
+  domain          String          @unique
   techStack       String[]
-  overallScore    Int              @default(0)
+  overallScore    Int             @default(0)
   userId          String
-  user            User             @relation(fields: [userId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
   breaches        BreachRecord[]
-  vulnerabilities Vulnerability[]
   complianceDocs  ComplianceDoc[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  user            User            @relation(fields: [userId], references: [id])
+  vulnerabilities Vulnerability[]
 }
 
 model BreachRecord {
   id          String   @id @default(cuid())
+  externalId  String?  // HIBP Name (unique anchor)
   vendorId    String
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
   description String
   date        DateTime
   createdAt   DateTime @default(now())
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+
+  @@unique([vendorId, externalId])
 }
 
 model Vulnerability {
   id          String   @id @default(cuid())
   vendorId    String
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
   cveId       String
   severity    String
   description String?
   createdAt   DateTime @default(now())
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+
+  @@unique([vendorId, cveId])
 }
 
 model ComplianceDoc {
   id           String   @id @default(cuid())
   vendorId     String
-  vendor       Vendor   @relation(fields: [vendorId], references: [id])
   name         String
-  status       String   // e.g., "Compliant", "Gaps Identified", "Expired"
-  parsedStatus Json     // Structured JSON from Gemini
+  status       String
+  parsedStatus Json
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  vendor       Vendor   @relation(fields: [vendorId], references: [id])
 }

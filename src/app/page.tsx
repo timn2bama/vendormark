@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
+import { auth, signIn, signOut } from '@/auth';
 
-async function getVendors() {
-  // In a real app, we'd filter by the logged-in user
+async function getVendors(userId: string) {
   return await prisma.vendor.findMany({
+    where: { userId },
     orderBy: { overallScore: 'asc' }, // Lower score = higher risk
     include: {
       _count: {
@@ -14,7 +15,33 @@ async function getVendors() {
 }
 
 export default async function Dashboard() {
-  const vendors = await getVendors();
+  const session = await auth();
+
+  if (!session) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
+        <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-md border text-center">
+          <h1 className="text-2xl font-bold mb-6 text-gray-900">VendorMark</h1>
+          <p className="text-gray-600 mb-8">Continuous Vendor Risk Monitoring. Please sign in to manage your vendors.</p>
+          <form
+            action={async () => {
+              "use server"
+              await signIn("google")
+            }}
+          >
+            <button
+              type="submit"
+              className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition font-medium"
+            >
+              Sign In with Google
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  const vendors = await getVendors(session.user?.id!);
 
   return (
     <main className="min-h-screen p-8 bg-gray-50">
@@ -22,14 +49,29 @@ export default async function Dashboard() {
         <header className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">VendorMark</h1>
-            <p className="text-gray-600">Continuous Vendor Risk Monitoring</p>
+            <p className="text-gray-600">Welcome, {session.user?.name || session.user?.email}</p>
           </div>
-          <Link 
-            href="/vendors/new"
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-          >
-            Add New Vendor
-          </Link>
+          <div className="flex items-center gap-4">
+            <form
+              action={async () => {
+                "use server"
+                await signOut()
+              }}
+            >
+              <button
+                type="submit"
+                className="text-gray-600 hover:text-gray-900 font-medium"
+              >
+                Sign Out
+              </button>
+            </form>
+            <Link 
+              href="/vendors/new"
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              Add New Vendor
+            </Link>
+          </div>
         </header>
 
         <div className="grid gap-6">

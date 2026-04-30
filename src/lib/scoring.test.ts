@@ -26,4 +26,13 @@ describe('calculateRiskScore', () => {
     const manyBreaches = Array(10).fill({ id: '1' }) as any
     expect(calculateRiskScore(manyBreaches, [], [])).toBe(0)
   })
+
+  it('applies compliance document penalties', () => {
+    const docs = [
+      { status: 'Gaps Identified' },
+      { status: 'Expired' }
+    ] as any
+    // 100 - 20 - 25 = 55
+    expect(calculateRiskScore([], [], docs)).toBe(55)
+  })
 })

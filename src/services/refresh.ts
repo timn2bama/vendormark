@@ -21,12 +21,11 @@ export class RefreshService {
     
     // 2. Fetch Vulnerabilities for Vendor and Tech Stack
     const techStackKeywords = [vendor.name, ...vendor.techStack];
-    const allVulns: any[] = [];
-
-    for (const keyword of techStackKeywords) {
-      const vulns = await CVEService.getVulnerabilitiesByKeyword(keyword);
-      allVulns.push(...vulns);
-    }
+    const vulnerabilityPromises = techStackKeywords.map(keyword => 
+      CVEService.getVulnerabilitiesByKeyword(keyword)
+    );
+    const results = await Promise.all(vulnerabilityPromises);
+    const allVulns = results.flat();
 
     // Remove duplicates and limit for MVP
     const uniqueVulns = Array.from(new Set(allVulns.map(v => v.cveId)))

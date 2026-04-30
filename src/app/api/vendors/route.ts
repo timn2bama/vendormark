@@ -1,6 +1,7 @@
 import { auth } from "@/auth"
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { TechnologyService } from '@/services/technology';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,12 +16,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name and Domain are required' }, { status: 400 });
     }
 
+    // Detect technologies
+    const techStack = await TechnologyService.detectTech(domain);
+
     const vendor = await prisma.vendor.create({
       data: {
         name,
         domain,
         userId: session.user.id,
         overallScore: 100,
+        techStack: techStack,
       },
     });
 

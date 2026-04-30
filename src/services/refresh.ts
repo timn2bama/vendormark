@@ -53,6 +53,12 @@ export class RefreshService {
       // 2. Surgical Refresh for Vulnerabilities
       for (const v of uniqueVulns) {
         if (!v) continue;
+
+        const existing = vendor.vulnerabilities.find(ev => ev.cveId === v.cveId);
+        if (!existing && (v.severity === 'CRITICAL' || v.severity === 'HIGH')) {
+          console.log(`[SECURITY ALERT] New ${v.severity} vulnerability found for ${vendor.name}: ${v.cveId}`);
+        }
+
         await tx.vulnerability.upsert({
           where: {
             vendorId_cveId: { vendorId, cveId: v.cveId }

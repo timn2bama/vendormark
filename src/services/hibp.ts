@@ -24,7 +24,6 @@ export interface HIBPBreach {
 }
 
 export class HIBPService {
-  private static API_KEY = process.env.HIBP_API_KEY;
   private static BASE_URL = 'https://haveibeenpwned.com/api/v3';
 
   /**
@@ -33,7 +32,8 @@ export class HIBPService {
    * as it changes infrequently (a few times a week).
    */
   static async getBreachesByDomain(domain: string): Promise<HIBPBreach[]> {
-    if (!this.API_KEY) {
+    const apiKey = process.env.HIBP_API_KEY;
+    if (!apiKey) {
       console.warn('HIBP_API_KEY is not set. Skipping breach check.');
       return [];
     }
@@ -42,7 +42,7 @@ export class HIBPService {
       // Fetch all breaches (this endpoint doesn't require a key but it's good practice to use one if available)
       const response = await fetch(`${this.BASE_URL}/breaches`, {
         headers: {
-          'hibp-api-key': this.API_KEY,
+          'hibp-api-key': apiKey,
           'user-agent': 'VendorMark-Security-Scanner'
         }
       });

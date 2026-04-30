@@ -4,16 +4,16 @@
  */
 
 export interface HIBPBreach {
-  Name: String;
-  Title: String;
-  Domain: String;
-  BreachDate: String;
-  AddedDate: String;
-  ModifiedDate: String;
+  Name: string;
+  Title: string;
+  Domain: string;
+  BreachDate: string;
+  AddedDate: string;
+  ModifiedDate: string;
   PwnCount: number;
-  Description: String;
-  LogoPath: String;
-  DataClasses: String[];
+  Description: string;
+  LogoPath: string;
+  DataClasses: string[];
   IsVerified: boolean;
   IsFabricated: boolean;
   IsSensitive: boolean;

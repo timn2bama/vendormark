@@ -27,16 +27,6 @@ export async function POST(
     // 1. Fetch Breaches
     const hibpBreaches = await HIBPService.getBreachesByDomain(vendor.domain);
     
-    // Clear old breaches and add new ones (Surgical update would be better, but this is an MVP)
-    await prisma.breachRecord.deleteMany({ where: { vendorId: id } });
-    await prisma.breachRecord.createMany({
-      data: hibpBreaches.map(b => ({
-        vendorId: id,
-        description: `${b.Title}: ${b.Description.substring(0, 200)}...`,
-        date: new Date(b.BreachDate.toString()),
-      })),
-    });
-
     // 2. Fetch Vulnerabilities for Vendor and Tech Stack
     const techStackKeywords = [vendor.name, ...vendor.techStack];
     const allVulns: any[] = [];
@@ -51,40 +41,68 @@ export async function POST(
       .map(cveId => allVulns.find(v => v.cveId === cveId))
       .slice(0, 50);
 
-    await prisma.vulnerability.deleteMany({ where: { vendorId: id } });
-    await prisma.vulnerability.createMany({
-      data: uniqueVulns.map(v => ({
-        vendorId: id,
-        cveId: v!.cveId,
-        severity: v!.severity,
-        description: v!.description,
-      })),
-    });
+    const updatedVendor = await prisma.$transaction(async (tx) => {
+      // 1. Surgical Refresh for Breaches
+      for (const b of hibpBreaches) {
+        await tx.breachRecord.upsert({
+          where: { 
+            vendorId_externalId: { vendorId: id, externalId: b.Name } 
+          },
+          update: {}, // Preserve existing data if it exists
+          create: {
+            vendorId: id,
+            externalId: b.Name,
+            description: `${b.Title}: ${b.Description.substring(0, 200)}...`,
+            date: new Date(b.BreachDate.toString()),
+          }
+        });
+      }
 
-    // 3. Recalculate Score
-    const updatedVendor = await prisma.vendor.findUnique({
-      where: { id },
-      include: {
-        breaches: true,
-        vulnerabilities: true,
-        complianceDocs: true,
-      },
-    });
+      // 2. Surgical Refresh for Vulnerabilities
+      for (const v of uniqueVulns) {
+        if (!v) continue;
+        await tx.vulnerability.upsert({
+          where: {
+            vendorId_cveId: { vendorId: id, cveId: v.cveId }
+          },
+          update: {
+            severity: v.severity,
+            description: v.description,
+          },
+          create: {
+            vendorId: id,
+            cveId: v.cveId,
+            severity: v.severity,
+            description: v.description,
+          }
+        });
+      }
 
-    if (updatedVendor) {
+      // 3. Recalculate Score within the transaction
+      const currentVendor = await tx.vendor.findUnique({
+        where: { id },
+        include: {
+          breaches: true,
+          vulnerabilities: true,
+          complianceDocs: true,
+        },
+      });
+
+      if (!currentVendor) throw new Error('Vendor lost during transaction');
+
       const newScore = calculateRiskScore(
-        updatedVendor.breaches,
-        updatedVendor.vulnerabilities,
-        updatedVendor.complianceDocs
+        currentVendor.breaches,
+        currentVendor.vulnerabilities,
+        currentVendor.complianceDocs
       );
 
-      await prisma.vendor.update({
+      return await tx.vendor.update({
         where: { id },
         data: { overallScore: newScore },
       });
-    }
+    });
 
-    return NextResponse.json({ success: true, newScore: updatedVendor?.overallScore });
+    return NextResponse.json({ success: true, newScore: updatedVendor.overallScore });
   } catch (error) {
     console.error('Refresh error:', error);
     return NextResponse.json({ error: 'Failed to refresh vendor data' }, { status: 500 });

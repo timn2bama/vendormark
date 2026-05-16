@@ -38,6 +38,7 @@ model Account {
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Session {
@@ -47,6 +48,9 @@ model Session {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([sessionToken])
 }
 
 model VerificationToken {
@@ -70,6 +74,9 @@ model Vendor {
   complianceDocs  ComplianceDoc[]
   user            User            @relation(fields: [userId], references: [id])
   vulnerabilities Vulnerability[]
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model BreachRecord {
@@ -82,6 +89,8 @@ model BreachRecord {
   vendor      Vendor   @relation(fields: [vendorId], references: [id])
 
   @@unique([vendorId, externalId])
+  @@index([vendorId])
+  @@index([date])
 }
 
 model Vulnerability {
@@ -94,6 +103,8 @@ model Vulnerability {
   vendor      Vendor   @relation(fields: [vendorId], references: [id])
 
   @@unique([vendorId, cveId])
+  @@index([vendorId])
+  @@index([severity])
 }
 
 model ComplianceDoc {
@@ -105,4 +116,7 @@ model ComplianceDoc {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   vendor       Vendor   @relation(fields: [vendorId], references: [id])
+
+  @@index([vendorId])
+  @@index([createdAt])
 }

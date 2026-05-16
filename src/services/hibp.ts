@@ -23,6 +23,13 @@ export interface HIBPBreach {
   IsSubscriptionFree: boolean;
 }
 
+function domainsMatch(breachDomain: string, targetDomain: string): boolean {
+  const normalize = (d: string) => d.toLowerCase().replace(/^www\./, '');
+  const normalized = normalize(targetDomain);
+  const breachNorm = normalize(breachDomain);
+  return breachNorm === normalized || breachNorm.endsWith(`.${normalized}`);
+}
+
 export class HIBPService {
   private static BASE_URL = 'https://haveibeenpwned.com/api/v3';
 
@@ -53,12 +60,8 @@ export class HIBPService {
 
       const allBreaches: HIBPBreach[] = await response.json();
       
-      // Filter breaches by domain
-      // Some breaches might have multiple domains or subdomains, so we do a simple match
-      return allBreaches.filter(breach => 
-        breach.Domain.toLowerCase().includes(domain.toLowerCase()) ||
-        domain.toLowerCase().includes(breach.Domain.toLowerCase())
-      );
+      // Filter breaches by domain using exact comparison to avoid false positives
+      return allBreaches.filter(breach => domainsMatch(breach.Domain, domain));
     } catch (error) {
       console.error('Error fetching breaches from HIBP:', error);
       return [];

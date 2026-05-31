@@ -40,7 +40,7 @@ export default function ComplianceUpload({ vendorId }: { vendorId: string }) {
         className="hidden"
         onChange={handleFileChange}
         disabled={isUploading}
-        accept=".pdf,.doc,.docx,.txt"
+        accept=".pdf,.png,.jpg,.jpeg"
       />
       <label 
         htmlFor="file-upload"
@@ -49,7 +49,7 @@ export default function ComplianceUpload({ vendorId }: { vendorId: string }) {
           ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
-        {isUploading ? 'Analyzing with Gemini...' : 'Upload Security Doc'}
+        {isUploading ? 'Analyzing with Claude...' : 'Upload Security Doc'}
       </label>
     </div>
   );

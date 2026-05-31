@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/db';
-import { GeminiService } from '@/services/gemini';
+import { ClaudeService } from '@/services/claude';
 import { calculateRiskScore } from '@/lib/scoring';
 
-const ALLOWED_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+// Claude ingests PDFs and images natively; Word formats are not supported as
+// document sources, so they're excluded here (convert DOC/DOCX to PDF to upload).
+const ALLOWED_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function POST(
@@ -43,11 +46,11 @@ export async function POST(
 
     const buffer = Buffer.from(await file.arrayBuffer());
     
-    // 1. Parse with Gemini
-    const parsedData = await GeminiService.parseComplianceDoc(buffer, file.type);
+    // 1. Parse with Claude
+    const parsedData = await ClaudeService.parseComplianceDoc(buffer, file.type);
 
     if (!parsedData) {
-      return NextResponse.json({ error: 'Failed to parse document with Gemini' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to parse document with Claude' }, { status: 500 });
     }
 
     // 2. Save to DB
@@ -56,7 +59,8 @@ export async function POST(
         vendorId: id,
         name: file.name,
         status: parsedData.status,
-        parsedStatus: parsedData,
+        // Typed domain object → Prisma Json column (structural impedance cast).
+        parsedStatus: parsedData as unknown as Prisma.InputJsonValue,
       },
     });
 
